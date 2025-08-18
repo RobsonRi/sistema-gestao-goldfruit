@@ -1,0 +1,17 @@
+# Arquivos de ambiente virtual
+.venv/
+venv/
+
+# Pastas do Python
+__pycache__/
+
+# Pastas de IDEs (PyCharm, VSCode)
+.idea/
+.vscode/
+
+# ARQUIVO SECRETO DO FIREBASE
+chave-firebase.json
+
+# Arquivo do banco de dados local (não precisamos dele na nuvem)
+dados.db
+dados.db-journal
