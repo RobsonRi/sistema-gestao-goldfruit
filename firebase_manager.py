@@ -8,17 +8,29 @@ from firebase_admin import credentials, firestore
 
 class FirebaseManager:
     def __init__(self, credential_path="chave-firebase.json"):
+        """
+        Inicializa a conexão com o Firebase, lendo a chave de um arquivo local
+        ou dos Secrets do Streamlit (como um texto JSON completo).
+        """
         try:
             if not firebase_admin._apps:
-                # Lógica para funcionar tanto localmente quanto na nuvem
+                cred_obj = None
+                # Se estiver rodando localmente, usa o arquivo
                 if os.path.exists(credential_path):
-                    # Se estiver rodando localmente, usa o arquivo
-                    cred = credentials.Certificate(credential_path)
+                    cred_obj = credentials.Certificate(credential_path)
+                # Se estiver na nuvem (Streamlit Cloud), usa os "Secrets"
                 else:
-                    # Se estiver na nuvem (Streamlit Cloud), usa os "Secrets"
-                    cred = credentials.Certificate(st.secrets["firebase_key"])
+                    # Pega o texto JSON completo dos Secrets
+                    key_str = st.secrets["FIREBASE_JSON_KEY"]
+                    # Converte o texto JSON para um dicionário Python
+                    key_dict = json.loads(key_str)
+                    # Cria as credenciais a partir do dicionário
+                    cred_obj = credentials.Certificate(key_dict)
 
-                firebase_admin.initialize_app(cred)
+                if cred_obj:
+                    firebase_admin.initialize_app(cred_obj)
+                else:
+                    raise FileNotFoundError("Não foi possível encontrar a chave de credenciais local ou nos Secrets.")
 
             self.db = firestore.client()
             print("✅ Conexão com o Firebase estabelecida.")
