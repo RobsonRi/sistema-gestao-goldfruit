@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
-from datetime import datetime, date
+import json
+from datetime import date
 
 # Importa o nosso gerenciador do Firebase
 from firebase_manager import FirebaseManager
@@ -9,6 +9,42 @@ from firebase_manager import FirebaseManager
 # --- Configuração da Página ---
 st.set_page_config(layout="wide", page_title="Dashboard de Gestão")
 st.title("📊 Dashboard Gerencial - GoldFruit")
+st.markdown("---")
+
+# --- Teste de Conexão e Depuração dos Secrets ---
+st.subheader("Status da Conexão com o Banco de Dados")
+
+try:
+    # Tentamos inicializar o gerenciador. É aqui que a conexão acontece.
+    fb_manager = FirebaseManager()
+
+    # Verificamos se a chave secreta foi lida corretamente pelo Streamlit
+    # st.secrets é um dicionário especial do Streamlit
+    if "FIREBASE_JSON_KEY" in st.secrets:
+        st.success("✅ Chave secreta do Firebase foi encontrada nos Secrets do Streamlit.")
+
+        # Tenta decodificar o JSON para garantir que o formato está correto
+        try:
+            key_dict = json.loads(st.secrets["FIREBASE_JSON_KEY"])
+            st.info(f"Chave JSON decodificada com sucesso. Project ID: {key_dict.get('project_id')}")
+        except json.JSONDecodeError as e:
+            st.error(
+                f"❌ ERRO DE FORMATAÇÃO: A chave secreta não é um JSON válido. Verifique se copiou o conteúdo inteiro do arquivo, incluindo os `{e}`. Erro: {e}")
+    else:
+        st.error(
+            "❌ ERRO CRÍTICO: Nenhuma chave secreta com o nome 'FIREBASE_JSON_KEY' foi encontrada nos Secrets do Streamlit.")
+
+    # Verifica se a conexão final foi bem-sucedida
+    if fb_manager.db:
+        st.success("✅ Conexão com o Firebase/Firestore estabelecida com sucesso!")
+    else:
+        st.error("❌ A conexão com o Firebase falhou. Verifique os logs do servidor para mais detalhes.")
+
+except Exception as e:
+    st.error(f"❌ Ocorreu um erro CRÍTICO ao tentar inicializar o FirebaseManager: {e}")
+    st.info(
+        "Isso geralmente acontece por um problema na configuração da chave secreta. Verifique o formato no painel do Streamlit.")
+
 st.markdown("---")
 
 
