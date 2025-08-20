@@ -1,51 +1,45 @@
 import firebase_admin
+from firebase_admin import credentials, firestore
 import os
 import json
 import streamlit as st
-from firebase_admin import credentials, firestore
 
 class FirebaseManager:
     def __init__(self, credential_path="chave-firebase.json"):
-        """
-        Inicializa a conexão com o Firebase, lendo a chave de um arquivo local
-        ou dos Secrets do Streamlit (como um texto JSON completo).
-        """
         try:
             if not firebase_admin._apps:
                 cred_obj = None
-                # Se estiver rodando localmente, usa o arquivo
                 if os.path.exists(credential_path):
                     cred_obj = credentials.Certificate(credential_path)
-                # Se estiver na nuvem (Streamlit Cloud), usa os "Secrets"
                 else:
-                    # Pega o texto JSON completo dos Secrets
                     key_str = st.secrets["FIREBASE_JSON_KEY"]
-                    # Converte o texto JSON para um dicionário Python
                     key_dict = json.loads(key_str)
-                    # Cria as credenciais a partir do dicionário
                     cred_obj = credentials.Certificate(key_dict)
-
                 if cred_obj:
                     firebase_admin.initialize_app(cred_obj)
                 else:
-                    raise FileNotFoundError("Não foi possível encontrar a chave de credenciais local ou nos Secrets.")
-
+                    raise FileNotFoundError("Não foi possível encontrar a chave de credenciais.")
             self.db = firestore.client()
-            print("✅ Conexão com o Firebase estabelecida.")
         except Exception as e:
-            print(f"❌ Falha ao conectar com o Firebase: {e}")
+            st.error(f"❌ Falha crítica ao conectar com o Firebase: {e}")
             self.db = None
 
     def fetch_all(self, collection_name):
         """Busca todos os documentos de uma coleção."""
         if not self.db: return []
-        docs = self.db.collection(collection_name).stream()
-        data_list = []
-        for doc in docs:
-            data = doc.to_dict()
-            data['id'] = doc.id
-            data_list.append(data)
-        return data_list
+        try:
+            docs = self.db.collection(collection_name).stream()
+            data_list = []
+            for doc in docs:
+                data = doc.to_dict()
+                data['id'] = doc.id
+                data_list.append(data)
+            # A CORREÇÃO ESTÁ AQUI: O 'return' está fora do loop 'for'
+            return data_list
+        except Exception as e:
+            print(f"Erro ao buscar todos os docs em '{collection_name}': {e}")
+            return []
+
 
     def insert(self, collection_name, data):
         """Insere um novo documento em uma coleção."""
