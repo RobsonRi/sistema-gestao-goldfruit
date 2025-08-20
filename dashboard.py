@@ -4,7 +4,7 @@ from datetime import datetime, date
 import json
 import base64
 
-
+#vamos testar
 from firebase_manager import FirebaseManager
 
 # --- Configuração da Página ---
