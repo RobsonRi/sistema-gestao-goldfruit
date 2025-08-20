@@ -1,5 +1,3 @@
-# firebase_manager.py (versão completa)
-
 import firebase_admin
 import os
 import json
