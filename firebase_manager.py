@@ -25,7 +25,6 @@ class FirebaseManager:
             self.db = None
 
     def fetch_all(self, collection_name):
-        """Busca todos os documentos de uma coleção."""
         if not self.db: return []
         try:
             docs = self.db.collection(collection_name).stream()
