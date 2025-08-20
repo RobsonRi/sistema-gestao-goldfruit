@@ -2,26 +2,35 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import os
 import json
-import streamlit as st
 
 class FirebaseManager:
     def __init__(self, credential_path="chave-firebase.json"):
+        """
+        Inicializa a conexão com o Firebase, lendo a chave de um arquivo local
+        ou de uma variável de ambiente (para a nuvem).
+        """
         try:
             if not firebase_admin._apps:
                 cred_obj = None
+                # Se estiver rodando localmente, usa o arquivo
                 if os.path.exists(credential_path):
                     cred_obj = credentials.Certificate(credential_path)
+                # Se estiver na nuvem, procura a variável de ambiente
                 else:
-                    key_str = st.secrets["FIREBASE_JSON_KEY"]
-                    key_dict = json.loads(key_str)
-                    cred_obj = credentials.Certificate(key_dict)
-                if cred_obj:
-                    firebase_admin.initialize_app(cred_obj)
-                else:
-                    raise FileNotFoundError("Não foi possível encontrar a chave de credenciais.")
+                    # Pega o conteúdo JSON completo da variável de ambiente
+                    key_str = os.environ.get("FIREBASE_JSON_KEY")
+                    if key_str:
+                        key_dict = json.loads(key_str)
+                        cred_obj = credentials.Certificate(key_dict)
+                    else:
+                        raise ValueError("Variável de ambiente FIREBASE_JSON_KEY não encontrada.")
+
+                firebase_admin.initialize_app(cred_obj)
+
             self.db = firestore.client()
+            print("✅ Conexão com o Firebase estabelecida.")
         except Exception as e:
-            st.error(f"❌ Falha crítica ao conectar com o Firebase: {e}")
+            print(f"❌ Falha ao conectar com o Firebase: {e}")
             self.db = None
 
     def fetch_all(self, collection_name):
