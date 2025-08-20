@@ -4,7 +4,7 @@ from datetime import datetime, date
 import json
 import base64
 
-# Importa o nosso gerenciador do Firebase
+
 from firebase_manager import FirebaseManager
 
 # --- Configuração da Página ---
