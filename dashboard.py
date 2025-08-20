@@ -1,50 +1,39 @@
-import streamlit as st
-import pandas as pd
+import firebase_admin
+from firebase_admin import credentials, firestore
+import os
 import json
-from datetime import date
+import base64 # <-- Nova importação
+import streamlit as st
 
-
-from firebase_manager import FirebaseManager
-
-
-st.set_page_config(layout="wide", page_title="Dashboard de Gestão")
-st.title("📊 Dashboard Gerencial - GoldFruit")
-st.markdown("---")
-
-
-st.subheader("Status da Conexão com o Banco de Dados")
-
-try:
-
-    fb_manager = FirebaseManager()
-
-
-    if "FIREBASE_JSON_KEY" in st.secrets:
-        st.success("✅ Chave secreta do Firebase foi encontrada nos Secrets do Streamlit.")
-
-
+class FirebaseManager:
+    def __init__(self, credential_path="chave-firebase.json"):
         try:
-            key_dict = json.loads(st.secrets["FIREBASE_JSON_KEY"])
-            st.info(f"Chave JSON decodificada com sucesso. Project ID: {key_dict.get('project_id')}")
-        except json.JSONDecodeError as e:
-            st.error(
-                f"❌ ERRO DE FORMATAÇÃO: A chave secreta não é um JSON válido. Verifique se copiou o conteúdo inteiro do arquivo, incluindo os `{e}`. Erro: {e}")
-    else:
-        st.error(
-            "❌ ERRO CRÍTICO: Nenhuma chave secreta com o nome 'FIREBASE_JSON_KEY' foi encontrada nos Secrets do Streamlit.")
+            if not firebase_admin._apps:
+                cred_obj = None
+                # Se estiver rodando localmente, usa o arquivo
+                if os.path.exists(credential_path):
+                    cred_obj = credentials.Certificate(credential_path)
+                # Se estiver na nuvem (Streamlit Cloud), usa os "Secrets"
+                else:
+                    # Pega o texto Base64 dos Secrets
+                    key_b64 = st.secrets["FIREBASE_JSON_KEY"]
+                    # Decodifica o texto Base64 de volta para um texto JSON
+                    key_json = base64.b64decode(key_b64).decode('utf-8')
+                    # Converte o texto JSON para um dicionário Python
+                    key_dict = json.loads(key_json)
+                    # Cria as credenciais a partir do dicionário
+                    cred_obj = credentials.Certificate(key_dict)
 
+                if cred_obj:
+                    firebase_admin.initialize_app(cred_obj)
+                else:
+                    raise FileNotFoundError("Não foi possível encontrar a chave de credenciais.")
 
-    if fb_manager.db:
-        st.success("✅ Conexão com o Firebase/Firestore estabelecida com sucesso!")
-    else:
-        st.error("❌ A conexão com o Firebase falhou. Verifique os logs do servidor para mais detalhes.")
-
-except Exception as e:
-    st.error(f"❌ Ocorreu um erro CRÍTICO ao tentar inicializar o FirebaseManager: {e}")
-    st.info(
-        "Isso geralmente acontece por um problema na configuração da chave secreta. Verifique o formato no painel do Streamlit.")
-
-st.markdown("---")
+            self.db = firestore.client()
+            print("✅ Conexão com o Firebase estabelecida.")
+        except Exception as e:
+            print(f"❌ Falha ao conectar com o Firebase: {e}")
+            self.db = None
 
 
 
