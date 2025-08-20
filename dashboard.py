@@ -1,57 +1,29 @@
-import firebase_admin
-from firebase_admin import credentials, firestore
-import pandas as pd
-import os
-import json
-import base64 # <-- Nova importação
 import streamlit as st
-from firebase_manager import FirebaseManager
+import pandas as pd
 from datetime import datetime, date
+import json
+import base64
 
-class FirebaseManager:
-    def __init__(self, credential_path="chave-firebase.json"):
-        try:
-            if not firebase_admin._apps:
-                cred_obj = None
-                # Se estiver rodando localmente, usa o arquivo
-                if os.path.exists(credential_path):
-                    cred_obj = credentials.Certificate(credential_path)
-                # Se estiver na nuvem (Streamlit Cloud), usa os "Secrets"
-                else:
-                    # Pega o texto Base64 dos Secrets
-                    key_b64 = st.secrets["FIREBASE_JSON_KEY"]
-                    # Decodifica o texto Base64 de volta para um texto JSON
-                    key_json = base64.b64decode(key_b64).decode('utf-8')
-                    # Converte o texto JSON para um dicionário Python
-                    key_dict = json.loads(key_json)
-                    # Cria as credenciais a partir do dicionário
-                    cred_obj = credentials.Certificate(key_dict)
+# Importa o nosso gerenciador do Firebase
+from firebase_manager import FirebaseManager
 
-                if cred_obj:
-                    firebase_admin.initialize_app(cred_obj)
-                else:
-                    raise FileNotFoundError("Não foi possível encontrar a chave de credenciais.")
-
-            self.db = firestore.client()
-            print("✅ Conexão com o Firebase estabelecida.")
-        except Exception as e:
-            print(f"❌ Falha ao conectar com o Firebase: {e}")
-            self.db = None
+# --- Configuração da Página ---
+st.set_page_config(layout="wide", page_title="Dashboard de Gestão")
+st.title("📊 Dashboard Gerencial - GoldFruit")
+st.markdown("---")
 
 
-
+# --- Carregamento e Preparação dos Dados (Versão Final e Corrigida) ---
 @st.cache_data
 def carregar_dados():
-    """Conecta no Firebase, carrega todas as coleções, junta as informações e retorna dois DataFrames."""
+    """Conecta no Firebase, carrega todas as coleções, junta as informações e retorna os DataFrames."""
     fb_manager = FirebaseManager()
     if not fb_manager.db:
         return pd.DataFrame(), pd.DataFrame()
 
-    # Carrega as coleções principais
     df_abastecimentos = pd.DataFrame(fb_manager.fetch_all('abastecimentos'))
     df_viagens = pd.DataFrame(fb_manager.fetch_all('viagens'))
 
-    # Carrega as "tabelas de dimensão" para enriquecer os dados
     df_pessoas = pd.DataFrame(fb_manager.fetch_all('pessoas'))
     df_veiculos = pd.DataFrame(fb_manager.fetch_all('veiculos'))
     df_postos = pd.DataFrame(fb_manager.fetch_all('postos_combustivel'))
@@ -61,22 +33,20 @@ def carregar_dados():
     df_localidades = pd.DataFrame(fb_manager.fetch_all('localidades'))
 
     # --- Processamento de Abastecimentos ---
-    if not df_abastecimentos.empty and not df_pessoas.empty and not df_veiculos.empty:
+    if not df_abastecimentos.empty:
         df_pessoas.rename(columns={'id': 'motorista_id', 'nome': 'motorista_nome'}, inplace=True)
-        df_veiculos.rename(columns={'id': 'veiculo_id', 'placa': 'veiculo_placa'}, inplace=True)
+        df_veiculos_abast = df_veiculos.rename(columns={'id': 'veiculo_id', 'placa': 'veiculo_placa'})
         df_postos.rename(columns={'id': 'posto_id', 'nome': 'posto_nome'}, inplace=True)
         df_centros_custo.rename(columns={'id': 'centro_custo_id', 'nome': 'centro_custo_nome'}, inplace=True)
-
         df_abastecimentos = pd.merge(df_abastecimentos, df_pessoas[['motorista_id', 'motorista_nome']],
                                      on='motorista_id', how='left')
-        df_abastecimentos = pd.merge(df_abastecimentos, df_veiculos[['veiculo_id', 'veiculo_placa', 'modelo']],
+        df_abastecimentos = pd.merge(df_abastecimentos, df_veiculos_abast[['veiculo_id', 'veiculo_placa', 'modelo']],
                                      on='veiculo_id', how='left')
         df_abastecimentos = pd.merge(df_abastecimentos, df_postos[['posto_id', 'posto_nome']], on='posto_id',
                                      how='left')
         df_abastecimentos = pd.merge(df_abastecimentos, df_centros_custo[['centro_custo_id', 'centro_custo_nome']],
                                      on='centro_custo_id', how='left')
         df_abastecimentos = pd.merge(df_abastecimentos, df_parametros_co2, on='tipo_combustivel', how='left')
-
         df_abastecimentos['data_hora'] = pd.to_datetime(df_abastecimentos['data_hora'], format='mixed', errors='coerce')
         df_abastecimentos.dropna(subset=['data_hora'], inplace=True)
         df_abastecimentos['outros_gastos_valor'] = df_abastecimentos['outros_gastos_valor'].fillna(0)
@@ -88,15 +58,13 @@ def carregar_dados():
         df_abastecimentos[colunas_moeda] = df_abastecimentos[colunas_moeda].round(2)
 
     # --- Processamento de Viagens ---
-    if not df_viagens.empty and not df_transportadoras.empty and not df_localidades.empty:
+    if not df_viagens.empty:
         df_transportadoras.rename(columns={'id': 'transportadora_id', 'nome': 'transportadora_nome'}, inplace=True)
         df_localidades.rename(columns={'id': 'localidade_id', 'nome': 'localidade_nome'}, inplace=True)
-
         df_viagens = pd.merge(df_viagens, df_transportadoras[['transportadora_id', 'transportadora_nome']],
                               on='transportadora_id', how='left')
         df_viagens = pd.merge(df_viagens, df_localidades[['localidade_id', 'localidade_nome']], on='localidade_id',
                               how='left')
-
         df_viagens['data_viagem'] = pd.to_datetime(df_viagens['data_viagem'], format='mixed', errors='coerce')
         df_viagens.dropna(subset=['data_viagem'], inplace=True)
         df_viagens['bonus_percentual'] = df_viagens['bonus_percentual'].fillna(0)
