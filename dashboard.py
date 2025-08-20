@@ -4,6 +4,7 @@ import os
 import json
 import base64 # <-- Nova importação
 import streamlit as st
+from firebase_manager import FirebaseManager
 
 class FirebaseManager:
     def __init__(self, credential_path="chave-firebase.json"):
