@@ -673,7 +673,7 @@ class AbastecimentoWindow:
         # Passo 4: Inverte o comando do cabeçalho para o próximo clique
         treeview.heading(coluna, command=lambda: self._ordenar_coluna(treeview, coluna, not reversa))
 
-    def _exportar_viagens_csv(self):
+    def _exportar_abastecimentos_csv(self):
         """Exporta os dados visíveis na tabela e adiciona um resumo por transportadora no final."""
         if not self.tree_viagens.get_children():
             messagebox.showwarning("Exportar", "Não há dados na tabela para exportar.", parent=self.window)
