@@ -1,10 +1,12 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
+import pandas as pd
 import os
 import json
 import base64 # <-- Nova importação
 import streamlit as st
 from firebase_manager import FirebaseManager
+from datetime import datetime, date
 
 class FirebaseManager:
     def __init__(self, credential_path="chave-firebase.json"):
