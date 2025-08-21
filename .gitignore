@@ -15,3 +15,8 @@ chave-firebase.json
 # Arquivo do banco de dados local (não precisamos dele na nuvem)
 dados.db
 dados.db-journal
+
+# Arquivos gerados pelo PyInstaller
+/dist/
+/build/
+*.spec

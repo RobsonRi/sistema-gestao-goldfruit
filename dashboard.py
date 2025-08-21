@@ -127,6 +127,24 @@ with tab_abastecimentos:
             st.bar_chart(
                 df_abast_filtrado.groupby('veiculo_placa')['quantidade_litros'].sum().sort_values(ascending=False))
 
+        st.markdown("---")
+
+        st.write("Evolução Mensal de Gastos com Abastecimento (R$)")
+
+        # Garante que não está vazio para evitar erros
+        if not df_abast_filtrado.empty:
+            # Cria uma cópia para evitar avisos de alteração de dados
+            df_para_grafico_linha = df_abast_filtrado.copy()
+
+            # Cria uma nova coluna 'mes_ano' para agrupar os dados (ex: '2025-03')
+            df_para_grafico_linha['mes_ano'] = df_para_grafico_linha['data_hora'].dt.to_period('M').astype(str)
+
+            # Agrupa por essa nova coluna e soma os custos totais de cada mês
+            gastos_mensais = df_para_grafico_linha.groupby('mes_ano')['custo_total'].sum()
+
+            # Plota o gráfico de linhas!
+            st.line_chart(gastos_mensais)
+
 with tab_fretes:
     # (A lógica da aba de fretes, que já estava correta, continua aqui)
     pass
